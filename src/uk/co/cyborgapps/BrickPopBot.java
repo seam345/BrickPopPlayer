@@ -6,6 +6,10 @@ import java.awt.Robot;
 import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.EmptyStackException;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.Stack;
 
 /**
@@ -19,17 +23,19 @@ import java.util.Stack;
 public class BrickPopBot
 {
 	static int test = 0;
+	static Stack<Thread> threads = new Stack<>();
+	static Stack<ScoreTurns> answers = new Stack<>();
 	
 	public static void main(String[] args) throws AWTException
 	{
 		for (int s = 0; s < 100; s++)
 		{
+			ThreadedSolver.setDepth = 0;
+			answers = new Stack<>();
 			Robot myRobot = new Robot();
 			
 			
-			int colourCount = 0;
 			ArrayList<Integer> colours = new ArrayList<>(10);
-			ArrayList<int[]> positions = new ArrayList<>(10);
 			
 			
 			BufferedImage screen = myRobot.createScreenCapture(new Rectangle(715, 360, 480, 480));
@@ -54,9 +60,6 @@ public class BrickPopBot
 					if (!pastColour)
 					{
 						colours.add(pixelColour);
-						int[] pos = {i, j};
-						positions.add(pos);
-						colourCount++;
 					}
 				}
 			}
@@ -102,26 +105,156 @@ public class BrickPopBot
 				y--;
 			}
 			
-			//		System.out.println(colours);
 			
 			BrickPopBot brickPopBot = new BrickPopBot();
-		
-		/*int[][][] newBoard = brickPopBot.propogate(board,3,0,board[3][0][0]);
-		newBoard = brickPopBot.colapseSpace(newBoard);
-		for (int a= 9; a >= 0; a--)
-		{
-			for (int s = 0; s < 10; s++)
-			{
-				System.out.printf("%d, ", newBoard[s][a][0]);
-			}
-			System.out.println();
-		}*/
 			
-			ScoreTurns[][] moves = brickPopBot.bestMoves(board, 0, 10);
-			int[] point = brickPopBot.maxScore(moves);
-			Stack<int[]> movesStack = moves[point[0]][point[1]].moves;
-//
-//			Stack<int[]> movesStack = brickPopBot.simpleSolver(board).moves;
+			Long startTime = System.currentTimeMillis();
+			brickPopBot.multithreadedSolver(board, new LinkedList<int[]>(), 0, 0);
+			ScoreTurns currentBestScore = new ScoreTurns();
+			System.out.printf("starting threads = %d \n", Thread.getAllStackTraces().keySet().size());
+			int waitLength = 2000;
+			
+			ThreadedDepthFirst threadedDepthFirst = new ThreadedDepthFirst(brickPopBot.boardCopy(board), answers);
+			threadedDepthFirst.start();
+			while (startTime + waitLength > System.currentTimeMillis())
+			{
+				switch (ThreadedSolver.setDepth)
+				{
+					case 4:
+					{
+						waitLength = 5000;
+						break;
+					}
+					case 5:
+					{
+						waitLength = 15000;
+						break;
+					}
+					case 6:
+					{
+						waitLength = 20000;
+						break;
+					}
+					case 7:
+					{
+						waitLength = 25000;
+						break;
+					}
+					case 8:
+					{
+						waitLength = 30000;
+						break;
+					}
+					case 9:
+					{
+						waitLength = 35000;
+						break;
+					}
+				}
+				if (ThreadedSolver.setDepth > 4)
+				{
+					boolean alive = false;
+					Stack<Thread> copyThreads = new Stack<>();
+					copyThreads.addAll(threads);
+					for (Thread popped : copyThreads)
+					{
+						if (popped.isAlive())
+						{
+							alive = true;
+							break;
+						}
+					}
+					if (!alive)
+					{
+						waitLength=0;
+					}
+				}
+				
+				try
+				{
+					ScoreTurns popped = answers.pop();
+					if (currentBestScore.compleated)
+					{
+						if (popped.compleated)
+						{
+							if (popped.score > currentBestScore.score)
+							{
+								currentBestScore = popped;
+							}
+						}
+					}
+					else
+					{
+						if (popped.compleated)
+						{
+							currentBestScore = popped;
+							
+						}
+						else if (popped.score > currentBestScore.score)
+						{
+							currentBestScore = popped;
+						}
+					}
+					
+					
+				} catch (EmptyStackException e)
+				{
+					try
+					{
+						Thread.sleep(10);
+					} catch (InterruptedException e1)
+					{
+						e1.printStackTrace();
+					}
+				}
+			}
+			System.out.printf("ending threads = %d \n", Thread.getAllStackTraces().keySet().size());
+			
+			for (Thread popped : threads)
+			{
+				if (popped != null && popped.isAlive())
+				{
+					popped.interrupt();
+				}
+			}
+			
+			for (ScoreTurns score : answers)
+			{
+				if (currentBestScore.compleated)
+				{
+					if (score.compleated)
+					{
+						if (score.score > currentBestScore.score)
+						{
+							currentBestScore = score;
+						}
+					}
+				}
+				else
+				{
+					if (score.compleated)
+					{
+						currentBestScore = score;
+						
+					}
+					else if (score.score > currentBestScore.score)
+					{
+						currentBestScore = score;
+					}
+				}
+				
+			}
+			threadedDepthFirst.interrupt();
+			System.out.printf("after purge threads = %d \n", Thread.getAllStackTraces().keySet().size());
+			
+			
+			//			ScoreTurns[][] moves = brickPopBot.bestMoves(board, 0, 10);
+			//			int[] point = brickPopBot.maxScore(moves);
+			//			Stack<int[]> movesStack = moves[point[0]][point[1]].moves;
+			//
+			//			Stack<int[]> movesStack = brickPopBot.simpleSolver(board).moves;
+			
+			Stack<int[]> movesStack = currentBestScore.moves;
 			int iteratons = movesStack.size();
 			for (int i = 0; i < iteratons; i++)
 			{
@@ -149,7 +282,14 @@ public class BrickPopBot
 			}
 			try
 			{
-				Thread.sleep(30000);
+				if (currentBestScore.compleated)
+				{
+					Thread.sleep(30000);
+				}
+				else
+				{
+					Thread.sleep(2500);
+				}
 			} catch (InterruptedException e)
 			{
 				e.printStackTrace();
@@ -199,7 +339,6 @@ public class BrickPopBot
 						}
 						else
 						{
-							//todo could remove branch by crossing off if the new board has only 1 of a colour as i never want a move that does that
 							if (noSingleColourCubes(newBoard))
 							{
 								
@@ -228,6 +367,47 @@ public class BrickPopBot
 		}
 		
 		return null;
+	}
+	
+	boolean multithreadedSolver(int[][][] board, LinkedList<int[]> moves, int currentScore, int depth)
+	{
+		int[][][] threadBoard = boardCopy(board);
+		LinkedList<int[]> threadMoves = movesCopy(moves);
+		
+		
+		Thread threadedSolver = new ThreadedSolver(threadBoard, threadMoves, currentScore, answers, depth);
+		threadedSolver.start();
+		threads.add(threadedSolver);
+		return threadedSolver.isAlive();
+		
+	}
+	
+	LinkedList<int[]> movesCopy(LinkedList<int[]> moves)
+	{
+		ListIterator<int[]> iterator = moves.listIterator(0);
+		LinkedList<int[]> copy = new LinkedList<>();
+		while (iterator.hasNext())
+		{
+			int[] move = iterator.next();
+			int[] moveCopy = {move[0], move[1]};
+			copy.add(moveCopy);
+		}
+		
+		return copy;
+	}
+	
+	Stack<int[]> listToStack(LinkedList<int[]> moves)
+	{
+		Iterator<int[]> iterator = moves.descendingIterator();
+		Stack<int[]> copy = new Stack<>();
+		while (iterator.hasNext())
+		{
+			int[] move = iterator.next();
+			int[] moveCopy = {move[0], move[1]};
+			copy.add(moveCopy);
+		}
+		
+		return copy;
 	}
 	
 	//todo new plan have a kind of simple solver implementation that returns one solution in a parralel way i will
@@ -475,7 +655,7 @@ public class BrickPopBot
 		return true;
 	}
 	
-	private int[] maxScore(ScoreTurns[][] scores)
+	int[] maxScore(ScoreTurns[][] scores)
 	{
 		int[] point = {0, 0};
 		
@@ -493,7 +673,7 @@ public class BrickPopBot
 		return point;
 	}
 	
-	private boolean allZeros(int[][][] board)
+	boolean allZeros(int[][][] board)
 	{
 		for (int i = 0; i < board.length; i++)
 		{
@@ -510,7 +690,7 @@ public class BrickPopBot
 		return true;
 	}
 	
-	private int numberOfZeros(int[][][] board)
+	int numberOfZeros(int[][][] board)
 	{
 		int zeros = 0;
 		for (int i = 0; i < board.length; i++)
@@ -528,7 +708,7 @@ public class BrickPopBot
 		return zeros;
 	}
 	
-	private int turnScore(int[][][] board, int xplay, int yplay)
+	int turnScore(int[][][] board, int xplay, int yplay)
 	{
 		int score = 1;
 		int oldZeros = numberOfZeros(board);
@@ -544,12 +724,12 @@ public class BrickPopBot
 		int removed = newZeros - oldZeros;
 		for (int i = 0; i < removed; i++)
 		{
-			score = score + score;
+			score++;
 		}
 		return score;
 	}
 	
-	private int[][][] propogate(int[][][] oldBoard, int x, int y, int colour) //direction 0=up 1=right 2=down 3=left
+	int[][][] propogate(int[][][] oldBoard, int x, int y, int colour) //direction 0=up 1=right 2=down 3=left
 	{
 		int[][][] board = boardCopy(oldBoard);
 		if (colour != 0)
@@ -579,7 +759,7 @@ public class BrickPopBot
 		return board;
 	}
 	
-	private int[][][] colapseSpace(int[][][] oldBoard)
+	int[][][] colapseSpace(int[][][] oldBoard)
 	{
 		int[][][] board = boardCopy(oldBoard);
 		
@@ -617,7 +797,7 @@ public class BrickPopBot
 		return board;
 	}
 	
-	private int[][][] boardCopy(int[][][] board)
+	int[][][] boardCopy(int[][][] board)
 	{
 		int[][][] newBoard = new int[10][10][3]; // cheating should make them all length
 		for (int i = 0; i < board.length; i++)
@@ -634,3 +814,4 @@ public class BrickPopBot
 	}
 	
 }
+

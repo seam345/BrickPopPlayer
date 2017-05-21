@@ -35,141 +35,28 @@ public class BrickPopBot
 			Robot myRobot = new Robot();
 			
 			
-			ArrayList<Integer> colours = new ArrayList<>(10);
 			
-			
-			BufferedImage screen = myRobot.createScreenCapture(new Rectangle(715, 360, 480, 480));
-			
-			for (int i = 24; i < screen.getHeight(); i = i + 48)
-			{
-				for (int j = 24; j < screen.getWidth(); j = j + 48)
-				{
-					boolean pastColour = false;
-					int pixelColour = screen.getRGB(j, i);
-					
-					for (Integer colour : colours)
-					{
-						if (colour == pixelColour || pixelColour == -528412)
-						{
-							{
-								pastColour = true;
-							}
-						}
-					}
-					
-					if (!pastColour)
-					{
-						colours.add(pixelColour);
-					}
-				}
-			}
-			
-			int[][][] board = new int[10][10][3]; // [x][y][colour,mousex,mousey]
-			for (int i = 0; i < board.length; i++)
-			{
-				for (int j = 0; j < board[i].length; j++)
-				{
-					for (int k = 0; k < board[i][j].length; k++)
-					{
-						board[i][j][k] = 0;
-					}
-				}
-			}
-			int x;
-			int y = 9;
-			
-			for (int i = 24; i < screen.getHeight(); i = i + 48)
-			{
-				x = 0;
-				for (int j = 24; j < screen.getWidth(); j = j + 48)
-				{
-					int pixelColour = screen.getRGB(j, i);
-					
-					for (int k = 0; k < colours.size(); k++)
-					{
-						if (pixelColour == -528412)
-						{
-							board[x][y][0] = 0;
-							board[x][y][1] = j;
-							board[x][y][2] = i;
-						}
-						if (pixelColour == colours.get(k))
-						{
-							board[x][y][0] = k + 1;
-							board[x][y][1] = j;
-							board[x][y][2] = i;
-						}
-					}
-					x++;
-				}
-				y--;
-			}
 			
 			
 			BrickPopBot brickPopBot = new BrickPopBot();
 			
+			
+			int[][][] board = brickPopBot.getBoard();
+			
+			
 			Long startTime = System.currentTimeMillis();
-			brickPopBot.multithreadedSolver(board, new LinkedList<int[]>(), 0, 0);
+			brickPopBot.multithreadedSolver(board, new LinkedList<>(), 0, 0);
 			ScoreTurns currentBestScore = new ScoreTurns();
+			ScoreTurns bestUnsolvedScore = new ScoreTurns();
 			System.out.printf("starting threads = %d \n", Thread.getAllStackTraces().keySet().size());
-			int waitLength = 2000;
+			int waitLength = 30000;
+			
 			
 			ThreadedDepthFirst threadedDepthFirst = new ThreadedDepthFirst(brickPopBot.boardCopy(board), answers);
 			threadedDepthFirst.start();
+			
 			while (startTime + waitLength > System.currentTimeMillis())
 			{
-				switch (ThreadedSolver.setDepth)
-				{
-					case 4:
-					{
-						waitLength = 5000;
-						break;
-					}
-					case 5:
-					{
-						waitLength = 15000;
-						break;
-					}
-					case 6:
-					{
-						waitLength = 20000;
-						break;
-					}
-					case 7:
-					{
-						waitLength = 25000;
-						break;
-					}
-					case 8:
-					{
-						waitLength = 30000;
-						break;
-					}
-					case 9:
-					{
-						waitLength = 35000;
-						break;
-					}
-				}
-				if (ThreadedSolver.setDepth > 4)
-				{
-					boolean alive = false;
-					Stack<Thread> copyThreads = new Stack<>();
-					copyThreads.addAll(threads);
-					for (Thread popped : copyThreads)
-					{
-						if (popped.isAlive())
-						{
-							alive = true;
-							break;
-						}
-					}
-					if (!alive)
-					{
-						waitLength=0;
-					}
-				}
-				
 				try
 				{
 					ScoreTurns popped = answers.pop();
@@ -193,6 +80,7 @@ public class BrickPopBot
 						else if (popped.score > currentBestScore.score)
 						{
 							currentBestScore = popped;
+							bestUnsolvedScore = popped;
 						}
 					}
 					
@@ -208,7 +96,8 @@ public class BrickPopBot
 					}
 				}
 			}
-			System.out.printf("ending threads = %d \n", Thread.getAllStackTraces().keySet().size());
+			
+//			System.out.printf("before purge threads =\t%d \n", Thread.getAllStackTraces().keySet().size());
 			
 			for (Thread popped : threads)
 			{
@@ -217,6 +106,7 @@ public class BrickPopBot
 					popped.interrupt();
 				}
 			}
+			threadedDepthFirst.interrupt();
 			
 			for (ScoreTurns score : answers)
 			{
@@ -240,22 +130,65 @@ public class BrickPopBot
 					else if (score.score > currentBestScore.score)
 					{
 						currentBestScore = score;
+						bestUnsolvedScore = score;
 					}
 				}
 				
 			}
-			threadedDepthFirst.interrupt();
-			System.out.printf("after purge threads = %d \n", Thread.getAllStackTraces().keySet().size());
 			
+//			System.out.printf("after purge threads =\t%d \n", Thread.getAllStackTraces().keySet().size());
+			System.out.println("sorted score =\t"+ currentBestScore.score);
+			System.out.println("unsorted score  =\t"+ bestUnsolvedScore.score);
 			
-			//			ScoreTurns[][] moves = brickPopBot.bestMoves(board, 0, 10);
-			//			int[] point = brickPopBot.maxScore(moves);
-			//			Stack<int[]> movesStack = moves[point[0]][point[1]].moves;
-			//
-			//			Stack<int[]> movesStack = brickPopBot.simpleSolver(board).moves;
+			if (bestUnsolvedScore.score != 0 && bestUnsolvedScore.score/ bestUnsolvedScore.moves.size()  > currentBestScore.score/ currentBestScore.moves.size())
+			{
+				System.out.println("checking unsolved");
+				Stack<int[]> moves = new Stack<>();
+				moves.addAll(bestUnsolvedScore.moves);
+				board = brickPopBot.getBoard();
+				int iterations = moves.size();
+				for (int i = 0; i < iterations; i++)
+				{
+					int[] pos = moves.pop();
+					
+					//9- for y because y was read from the top but i put it into the array at the bottom
+					board = brickPopBot.propogate(board, (pos[0]-24)/48, (9-((pos[1]-24)/48)), board[(pos[0]-24)/48][ (9-((pos[1]-24)/48))][0]);
+					board = brickPopBot.colapseSpace(board);
+					
+					
+				}
+				
+				threadedDepthFirst = new ThreadedDepthFirst(board,answers);
+				threadedDepthFirst.start();
+				try
+				{
+					Thread.sleep(1000);
+				} catch (InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+				
+				threadedDepthFirst.interrupt();
+				if (!answers.empty())
+				{
+					System.out.println("selecting unsolved");
+					currentBestScore = bestUnsolvedScore;
+				}else
+				{
+					System.out.println("not selected unsolved");
+				}
+			}
+			
 			
 			Stack<int[]> movesStack = currentBestScore.moves;
 			int iteratons = movesStack.size();
+			if (currentBestScore.compleated)
+			{
+				if (iteratons > 5)
+				{
+					iteratons = 3;
+				}
+			}
 			for (int i = 0; i < iteratons; i++)
 			{
 				int[] pos = movesStack.pop();
@@ -282,7 +215,7 @@ public class BrickPopBot
 			}
 			try
 			{
-				if (currentBestScore.compleated)
+				if (currentBestScore.compleated && movesStack.empty())
 				{
 					Thread.sleep(30000);
 				}
@@ -294,8 +227,86 @@ public class BrickPopBot
 			{
 				e.printStackTrace();
 			}
+			System.out.printf("\n\n\n\n\n\n\n\n");
 		}
 		
+		
+		
+	}
+	
+	int[][][] getBoard () throws AWTException
+	{
+		Robot myRobot = new Robot();
+		ArrayList<Integer> colours = new ArrayList<>(10);
+		
+		
+		BufferedImage screen = myRobot.createScreenCapture(new Rectangle(715, 360, 480, 480));
+		
+		for (int i = 24; i < screen.getHeight(); i = i + 48)
+		{
+			for (int j = 24; j < screen.getWidth(); j = j + 48)
+			{
+				boolean pastColour = false;
+				int pixelColour = screen.getRGB(j, i);
+				
+				for (Integer colour : colours)
+				{
+					if (colour == pixelColour || pixelColour == -528412)
+					{
+						{
+							pastColour = true;
+						}
+					}
+				}
+				
+				if (!pastColour)
+				{
+					colours.add(pixelColour);
+				}
+			}
+		}
+		
+		int[][][] board = new int[10][10][3]; // [x][y][colour,mousex,mousey]
+		for (int i = 0; i < board.length; i++)
+		{
+			for (int j = 0; j < board[i].length; j++)
+			{
+				for (int k = 0; k < board[i][j].length; k++)
+				{
+					board[i][j][k] = 0;
+				}
+			}
+		}
+		int x;
+		int y = 9;
+		
+		for (int i = 24; i < screen.getHeight(); i = i + 48)
+		{
+			x = 0;
+			for (int j = 24; j < screen.getWidth(); j = j + 48)
+			{
+				int pixelColour = screen.getRGB(j, i);
+				
+				for (int k = 0; k < colours.size(); k++)
+				{
+					if (pixelColour == -528412)
+					{
+						board[x][y][0] = 0;
+						board[x][y][1] = j;
+						board[x][y][2] = i;
+					}
+					if (pixelColour == colours.get(k))
+					{
+						board[x][y][0] = k + 1;
+						board[x][y][1] = j;
+						board[x][y][2] = i;
+					}
+				}
+				x++;
+			}
+			y--;
+		}
+		return board;
 	}
 	
 	ScoreTurns simpleSolver(int[][][] board)
@@ -410,11 +421,6 @@ public class BrickPopBot
 		return copy;
 	}
 	
-	//todo new plan have a kind of simple solver implementation that returns one solution in a parralel way i will
-	//todo process all of the possible outcomes these shall be sent to a timer thread of the score and a flag if it compleated
-	//todo flag beats any score and each list of moves is replaced if a score is better so a 10 relaces a 1 but not if flaged as complete
-	//todo once the timer ends all child process will be killed and the current moves will be executed if not a compleate set of moves are set then it doesnt matter
-	//todo because the next iteration will start again where the last left off
 	ScoreTurns[][] bestMoves(int[][][] board, int depth, int maxDepth)
 	{
 		if (depth == maxDepth)
@@ -722,10 +728,11 @@ public class BrickPopBot
 		
 		
 		int removed = newZeros - oldZeros;
-		for (int i = 0; i < removed; i++)
-		{
-			score++;
-		}
+		score = removed * (removed-1);
+//		for (int i = 0; i < removed; i++)
+//		{
+//			score = score + removed-1;
+//		}
 		return score;
 	}
 	

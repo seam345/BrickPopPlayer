@@ -39,11 +39,11 @@ public class ThreadedSolver extends Thread
 		int nbThreads =  Thread.getAllStackTraces().keySet().size();
 		while(nbThreads > 50)
 		{
-			if (depth>setDepth)
+		/*	if (depth>setDepth)
 			{
 				System.out.println(setDepth);
 				setDepth= depth;
-			}
+			}*/
 			try
 			{
 				Thread.sleep(2*depth);
@@ -82,8 +82,7 @@ public class ThreadedSolver extends Thread
 						scoreTurns.moves.addAll(brickPopBot.listToStack(threadMoves));
 						scoreTurns.compleated = true;
 						answers.add(scoreTurns);
-						System.out.println(threadMoves.size());
-						System.out.println(scoreTurns.moves.size());
+						System.out.println("found solution, in breadth first");
 					}
 					else
 					{

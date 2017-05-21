@@ -86,6 +86,7 @@ public class ThreadedDepthFirst extends Thread
 									returnMoves[0] = board[i][j][1];
 									returnMoves[1] = board[i][j][2];
 									scoreTurns.moves.add(returnMoves);
+									scoreTurns.score = scoreTurns.score + brickPopBot.turnScore(board, i, j);
 									if (scoreTurns.compleated)
 									{
 										return scoreTurns;

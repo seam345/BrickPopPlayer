@@ -1,6 +1,5 @@
 package uk.co.cyborgapps;
 
-import java.util.ArrayList;
 import java.util.Stack;
 
 /**
@@ -11,17 +10,17 @@ import java.util.Stack;
  * Version:        1.0
  */
 
-public class ScoreTurns
+class ScoreTurns
 {
 //	public ArrayList<int[]> moves;
-	public Stack<int[]> moves = new Stack<>();
-	public int score = 0;
-	boolean compleated = false;
+	Stack<int[]> moves = new Stack<>();
+	int score = 0;
+	boolean completed = false;
 	
 	ScoreTurns()
 	{
 		score = 0;
 		moves = new Stack<>();
-		compleated = false;
+		completed = false;
 	}
 }

@@ -22,9 +22,8 @@ import java.util.Stack;
 
 public class BrickPopBot
 {
-	static int test = 0;
-	static Stack<Thread> threads = new Stack<>();
-	static Stack<ScoreTurns> answers = new Stack<>();
+	private static Stack<Thread> threads = new Stack<>();
+	private static Stack<ScoreTurns> answers = new Stack<>();
 	
 	public static void main(String[] args) throws AWTException
 	{
@@ -33,9 +32,6 @@ public class BrickPopBot
 			ThreadedSolver.setDepth = 0;
 			answers = new Stack<>();
 			Robot myRobot = new Robot();
-			
-			
-			
 			
 			
 			BrickPopBot brickPopBot = new BrickPopBot();
@@ -49,7 +45,7 @@ public class BrickPopBot
 			ScoreTurns currentBestScore = new ScoreTurns();
 			ScoreTurns bestUnsolvedScore = new ScoreTurns();
 			System.out.printf("starting threads = %d \n", Thread.getAllStackTraces().keySet().size());
-			int waitLength = 30000;
+			int waitLength = 2000;
 			
 			
 			ThreadedDepthFirst threadedDepthFirst = new ThreadedDepthFirst(brickPopBot.boardCopy(board), answers);
@@ -60,9 +56,9 @@ public class BrickPopBot
 				try
 				{
 					ScoreTurns popped = answers.pop();
-					if (currentBestScore.compleated)
+					if (currentBestScore.completed)
 					{
-						if (popped.compleated)
+						if (popped.completed)
 						{
 							if (popped.score > currentBestScore.score)
 							{
@@ -72,7 +68,7 @@ public class BrickPopBot
 					}
 					else
 					{
-						if (popped.compleated)
+						if (popped.completed)
 						{
 							currentBestScore = popped;
 							
@@ -110,9 +106,9 @@ public class BrickPopBot
 			
 			for (ScoreTurns score : answers)
 			{
-				if (currentBestScore.compleated)
+				if (currentBestScore.completed)
 				{
-					if (score.compleated)
+					if (score.completed)
 					{
 						if (score.score > currentBestScore.score)
 						{
@@ -122,7 +118,7 @@ public class BrickPopBot
 				}
 				else
 				{
-					if (score.compleated)
+					if (score.completed)
 					{
 						currentBestScore = score;
 						
@@ -152,7 +148,7 @@ public class BrickPopBot
 					int[] pos = moves.pop();
 					
 					//9- for y because y was read from the top but i put it into the array at the bottom
-					board = brickPopBot.propogate(board, (pos[0]-24)/48, (9-((pos[1]-24)/48)), board[(pos[0]-24)/48][ (9-((pos[1]-24)/48))][0]);
+					board = brickPopBot.propagate(board, (pos[0]-24)/48, (9-((pos[1]-24)/48)), board[(pos[0]-24)/48][ (9-((pos[1]-24)/48))][0]);
 					board = brickPopBot.colapseSpace(board);
 					
 					
@@ -182,7 +178,7 @@ public class BrickPopBot
 			
 			Stack<int[]> movesStack = currentBestScore.moves;
 			int iteratons = movesStack.size();
-			if (currentBestScore.compleated)
+			if (currentBestScore.completed)
 			{
 				if (iteratons > 5)
 				{
@@ -215,7 +211,7 @@ public class BrickPopBot
 			}
 			try
 			{
-				if (currentBestScore.compleated && movesStack.empty())
+				if (currentBestScore.completed && movesStack.empty())
 				{
 					Thread.sleep(30000);
 				}
@@ -234,7 +230,7 @@ public class BrickPopBot
 		
 	}
 	
-	int[][][] getBoard () throws AWTException
+	private int[][][] getBoard() throws AWTException
 	{
 		Robot myRobot = new Robot();
 		ArrayList<Integer> colours = new ArrayList<>(10);
@@ -309,78 +305,7 @@ public class BrickPopBot
 		return board;
 	}
 	
-	ScoreTurns simpleSolver(int[][][] board)
-	{
-		ScoreTurns score = new ScoreTurns();
-		int[][][] erraseBoard = boardCopy(board);
-		
-		for (int i = 0; i < 10; i++)
-		{
-			for (int j = 0; j < 10; j++)
-			{
-				if (erraseBoard[i][j][0] != 0)
-				{
-					int[][][] newBoard = boardCopy(board);
-					
-					newBoard = propogate(newBoard, i, j, newBoard[i][j][0]);
-					newBoard = colapseSpace(newBoard);
-					erraseBoard = propogate(erraseBoard, i, j, erraseBoard[i][j][0]);
-					
-					if (allZeros(newBoard))
-					{
-						ScoreTurns scoreTurns = new ScoreTurns();
-						
-						int[] move = new int[2];
-						move[0] = board[i][j][1];
-						move[1] = board[i][j][2];
-						scoreTurns.moves.add(move);
-						scoreTurns.score = turnScore(board, i, j) + Integer.MAX_VALUE;
-						if (scoreTurns.score < 0)
-						{
-							scoreTurns.score = Integer.MAX_VALUE;
-						}
-						
-						return scoreTurns;
-					}
-					else
-					{
-						if (numberOfZeros(newBoard) == numberOfZeros(board))
-						{
-						
-						}
-						else
-						{
-							if (noSingleColourCubes(newBoard))
-							{
-								
-								ScoreTurns scoreTurns = simpleSolver(newBoard);
-								if (scoreTurns != null)
-								{
-									int[] returnMoves = new int[2];
-									returnMoves[0] = board[i][j][1];
-									returnMoves[1] = board[i][j][2];
-									scoreTurns.moves.add(returnMoves);
-									
-									if (scoreTurns.score == Integer.MAX_VALUE)
-									{
-										return scoreTurns;
-									}
-								}
-								
-								
-							}
-							
-						}
-					}
-					
-				}
-			}
-		}
-		
-		return null;
-	}
-	
-	boolean multithreadedSolver(int[][][] board, LinkedList<int[]> moves, int currentScore, int depth)
+	void multithreadedSolver(int[][][] board, LinkedList<int[]> moves, int currentScore, int depth)
 	{
 		int[][][] threadBoard = boardCopy(board);
 		LinkedList<int[]> threadMoves = movesCopy(moves);
@@ -389,11 +314,11 @@ public class BrickPopBot
 		Thread threadedSolver = new ThreadedSolver(threadBoard, threadMoves, currentScore, answers, depth);
 		threadedSolver.start();
 		threads.add(threadedSolver);
-		return threadedSolver.isAlive();
+		threadedSolver.isAlive();
 		
 	}
 	
-	LinkedList<int[]> movesCopy(LinkedList<int[]> moves)
+	private LinkedList<int[]> movesCopy(LinkedList<int[]> moves)
 	{
 		ListIterator<int[]> iterator = moves.listIterator(0);
 		LinkedList<int[]> copy = new LinkedList<>();
@@ -421,220 +346,20 @@ public class BrickPopBot
 		return copy;
 	}
 	
-	ScoreTurns[][] bestMoves(int[][][] board, int depth, int maxDepth)
-	{
-		if (depth == maxDepth)
-		{
-			ScoreTurns[][] scores = new ScoreTurns[10][10];
-			for (int i = 0; i < 10; i++)
-			{
-				for (int j = 0; j < 10; j++)
-				{
-					scores[i][j] = new ScoreTurns();
-				}
-			}
-			int[][][] erraseBoard = boardCopy(board);
-			
-			int numberOfBranches = 0;
-			for (int i = 0; i < 10; i++)
-			{
-				for (int j = 0; j < 10; j++)
-				{
-					if (erraseBoard[i][j][0] != 0)
-					{
-						int[][][] newBoard = boardCopy(board);
-						
-						newBoard = propogate(newBoard, i, j, newBoard[i][j][0]);
-						newBoard = colapseSpace(newBoard);
-						erraseBoard = propogate(erraseBoard, i, j, erraseBoard[i][j][0]);
-						
-						if (allZeros(newBoard))
-						{
-							ScoreTurns scoreTurns = new ScoreTurns();
-							
-							int[] move = new int[2];
-							move[0] = board[i][j][1];
-							move[1] = board[i][j][2];
-							scoreTurns.moves.add(move);
-							scoreTurns.score = turnScore(board, i, j) + Integer.MAX_VALUE;
-							if (scoreTurns.score < 0)
-							{
-								scoreTurns.score = Integer.MAX_VALUE;
-							}
-							scores[i][j] = scoreTurns;
-							return scores;
-						}
-						else
-						{
-							if (numberOfZeros(newBoard) == numberOfZeros(board))
-							{
-								ScoreTurns scoreTurns = new ScoreTurns();
-								
-								int[] move = new int[2];
-								move[0] = board[i][j][1];
-								move[1] = board[i][j][2];
-								scoreTurns.moves.add(move);
-								scoreTurns.score = 0;
-								scores[i][j] = scoreTurns;
-							}
-							else
-							{
-								//todo could remove branch by crossing off if the new board has only 1 of a colour as i never want a move that does that
-								if (noSingleColourCubes(newBoard))
-								{
-									numberOfBranches++;
-									ScoreTurns scoreTurns = new ScoreTurns();
-									
-									
-									int[] returnMoves = new int[2];
-									returnMoves[0] = board[i][j][1];
-									returnMoves[1] = board[i][j][2];
-									scoreTurns.moves.add(returnMoves);
-									scoreTurns.score = scoreTurns.score + turnScore(board, i, j);
-									if (scoreTurns.score < 0)
-									{
-										scoreTurns.score = Integer.MAX_VALUE;
-									}
-									scores[i][j] = scoreTurns;
-								}
-								else
-								{
-									ScoreTurns scoreTurns = new ScoreTurns();
-									
-									int[] move = new int[2];
-									move[0] = board[i][j][1];
-									move[1] = board[i][j][2];
-									scoreTurns.moves.add(move);
-									scoreTurns.score = 0;
-									scores[i][j] = scoreTurns;
-								}
-								
-							}
-						}
-						
-					}
-				}
-			}
-			return scores;
-		}
-		ScoreTurns[][] scores = new ScoreTurns[10][10];
-		for (int i = 0; i < 10; i++)
-		{
-			for (int j = 0; j < 10; j++)
-			{
-				scores[i][j] = new ScoreTurns();
-			}
-		}
-		int[][][] erraseBoard = boardCopy(board);
-		
-		int numberOfBranches = 0;
-		for (int i = 0; i < 10; i++)
-		{
-			for (int j = 0; j < 10; j++)
-			{
-				if (erraseBoard[i][j][0] != 0)
-				{
-					int[][][] newBoard = boardCopy(board);
-					
-					newBoard = propogate(newBoard, i, j, newBoard[i][j][0]);
-					newBoard = colapseSpace(newBoard);
-					erraseBoard = propogate(erraseBoard, i, j, erraseBoard[i][j][0]);
-					
-					if (allZeros(newBoard))
-					{
-						ScoreTurns scoreTurns = new ScoreTurns();
-						
-						int[] move = new int[2];
-						move[0] = board[i][j][1];
-						move[1] = board[i][j][2];
-						scoreTurns.moves.add(move);
-						scoreTurns.score = turnScore(board, i, j) + Integer.MAX_VALUE;
-						if (scoreTurns.score < 0)
-						{
-							scoreTurns.score = Integer.MAX_VALUE;
-						}
-						scores[i][j] = scoreTurns;
-						//						return scores; // cuts the rest of the branch for speed but wont get highest score saying that nor does setting it to integer.max
-						
-					}
-					else
-					{
-						if (numberOfZeros(newBoard) == numberOfZeros(board))
-						{
-							ScoreTurns scoreTurns = new ScoreTurns();
-							
-							int[] move = new int[2];
-							move[0] = board[i][j][1];
-							move[1] = board[i][j][2];
-							scoreTurns.moves.add(move);
-							scoreTurns.score = 0;
-							scores[i][j] = scoreTurns;
-						}
-						else
-						{
-							if (noSingleColourCubes(newBoard))
-							{
-								numberOfBranches++;
-								ScoreTurns[][] scoreTurns = bestMoves(newBoard, depth + 1, maxDepth);
-								int[] temp = maxScore(scoreTurns);
-								
-								int[] returnMoves = new int[2];
-								returnMoves[0] = board[i][j][1];
-								returnMoves[1] = board[i][j][2];
-								scoreTurns[temp[0]][temp[1]].moves.add(returnMoves);
-								scoreTurns[temp[0]][temp[1]].score = scoreTurns[temp[0]][temp[1]].score + turnScore(board, i, j);
-								if (scoreTurns[temp[0]][temp[1]].score < 0)
-								{
-									scoreTurns[temp[0]][temp[1]].score = Integer.MAX_VALUE;
-								}
-								scores[i][j] = scoreTurns[temp[0]][temp[1]];
-							}
-							else // dont want this branch as it results in a cube of only 1 colour being left
-							{
-								ScoreTurns scoreTurns = new ScoreTurns();
-								
-								int[] move = new int[2];
-								move[0] = board[i][j][1];
-								move[1] = board[i][j][2];
-								scoreTurns.moves.add(move);
-								scoreTurns.score = 0;
-								scores[i][j] = scoreTurns;
-							}
-							
-
-							/*test++;
-							if(test%1000 ==0)
-							{
-								System.out.printf("%d %d\n", test, depth);
-							}*/
-							//
-						}
-					}
-					
-				}
-			}
-		}
-		
-		System.out.printf("%d %d \n", numberOfBranches, depth);
-		
-		
-		return scores;
-	}
-	
 	
 	boolean noSingleColourCubes(int[][][] board)
 	{
 		ArrayList<int[]> occorances = new ArrayList<>(3);
-		for (int i = 0; i < board.length; i++)
+		for (int[][] aBoard : board)
 		{
-			for (int j = 0; j < board[i].length; j++)
+			for (int[] anABoard : aBoard)
 			{
-				if (board[i][j][0] != 0)
+				if (anABoard[0] != 0)
 				{
 					boolean found = false;
 					for (int[] occurrence : occorances)
 					{
-						if (occurrence[0] == board[i][j][0])
+						if (occurrence[0] == anABoard[0])
 						{
 							found = true;
 							occurrence[1]++;
@@ -643,7 +368,7 @@ public class BrickPopBot
 					if (!found)
 					{
 						int[] adding = new int[2];
-						adding[0] = board[i][j][0];
+						adding[0] = anABoard[0];
 						adding[1] = 1;
 						occorances.add(adding);
 					}
@@ -661,32 +386,14 @@ public class BrickPopBot
 		return true;
 	}
 	
-	int[] maxScore(ScoreTurns[][] scores)
-	{
-		int[] point = {0, 0};
-		
-		for (int i = 0; i < scores.length; i++)
-		{
-			for (int j = 0; j < scores[i].length; j++)
-			{
-				if (scores[i][j].score > scores[point[0]][point[1]].score)
-				{
-					point[0] = i;
-					point[1] = j;
-				}
-			}
-		}
-		return point;
-	}
-	
 	boolean allZeros(int[][][] board)
 	{
-		for (int i = 0; i < board.length; i++)
+		for (int[][] aBoard : board)
 		{
-			for (int j = 0; j < board[i].length; j++)
+			for (int[] anABoard : aBoard)
 			{
 				
-				if (board[i][j][0] != 0)
+				if (anABoard[0] != 0)
 				{
 					return false;
 				}
@@ -699,12 +406,12 @@ public class BrickPopBot
 	int numberOfZeros(int[][][] board)
 	{
 		int zeros = 0;
-		for (int i = 0; i < board.length; i++)
+		for (int[][] aBoard : board)
 		{
-			for (int j = 0; j < board[i].length; j++)
+			for (int[] anABoard : aBoard)
 			{
 				
-				if (board[i][j][0] == 0)
+				if (anABoard[0] == 0)
 				{
 					zeros++;
 				}
@@ -716,27 +423,24 @@ public class BrickPopBot
 	
 	int turnScore(int[][][] board, int xplay, int yplay)
 	{
-		int score = 1;
+		int score ;
 		int oldZeros = numberOfZeros(board);
 		
 		
 		int[][][] newBoard = boardCopy(board);
 		
 		
-		newBoard = propogate(newBoard, xplay, yplay, board[xplay][yplay][0]);
+		newBoard = propagate(newBoard, xplay, yplay, board[xplay][yplay][0]);
 		int newZeros = numberOfZeros(newBoard);
 		
 		
 		int removed = newZeros - oldZeros;
 		score = removed * (removed-1);
-//		for (int i = 0; i < removed; i++)
-//		{
-//			score = score + removed-1;
-//		}
+//
 		return score;
 	}
 	
-	int[][][] propogate(int[][][] oldBoard, int x, int y, int colour) //direction 0=up 1=right 2=down 3=left
+	int[][][] propagate(int[][][] oldBoard, int x, int y, int colour) //direction 0=up 1=right 2=down 3=left
 	{
 		int[][][] board = boardCopy(oldBoard);
 		if (colour != 0)
@@ -744,22 +448,22 @@ public class BrickPopBot
 			if (y != 9 && board[x][y + 1][0] == colour)
 			{
 				board[x][y + 1][0] = 0;
-				board = propogate(board, x, y + 1, colour);
+				board = propagate(board, x, y + 1, colour);
 			}
 			if (x != 9 && board[x + 1][y][0] == colour)
 			{
 				board[x + 1][y][0] = 0;
-				board = propogate(board, x + 1, y, colour);
+				board = propagate(board, x + 1, y, colour);
 			}
 			if (y != 0 && board[x][y - 1][0] == colour)
 			{
 				board[x][y - 1][0] = 0;
-				board = propogate(board, x, y - 1, colour);
+				board = propagate(board, x, y - 1, colour);
 			}
 			if (x != 0 && board[x - 1][y][0] == colour)
 			{
 				board[x - 1][y][0] = 0;
-				board = propogate(board, x - 1, y, colour);
+				board = propagate(board, x - 1, y, colour);
 			}
 		}
 		
@@ -811,10 +515,7 @@ public class BrickPopBot
 		{
 			for (int j = 0; j < board[i].length; j++)
 			{
-				for (int k = 0; k < board[i][j].length; k++)
-				{
-					newBoard[i][j][k] = board[i][j][k];
-				}
+				System.arraycopy(board[i][j], 0, newBoard[i][j], 0, board[i][j].length);
 			}
 		}
 		return newBoard;

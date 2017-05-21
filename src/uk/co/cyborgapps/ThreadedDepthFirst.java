@@ -12,10 +12,10 @@ import java.util.Stack;
 
 public class ThreadedDepthFirst extends Thread
 {
-	int[][][] board;
-	Stack<ScoreTurns> answers;
+	private int[][][] board;
+	private Stack<ScoreTurns> answers;
 	
-	public ThreadedDepthFirst(int[][][] board, Stack<ScoreTurns> answers)
+	ThreadedDepthFirst(int[][][] board, Stack<ScoreTurns> answers)
 	{
 		this.board = board;
 		this.answers = answers;
@@ -31,7 +31,7 @@ public class ThreadedDepthFirst extends Thread
 		}
 		
 	}
-	ScoreTurns simpleSolver(int[][][] board)
+	private ScoreTurns simpleSolver(int[][][] board)
 	{
 		BrickPopBot brickPopBot = new BrickPopBot();
 		int[][][] erraseBoard = brickPopBot.boardCopy(board);
@@ -48,9 +48,9 @@ public class ThreadedDepthFirst extends Thread
 				{
 					int[][][] newBoard = brickPopBot.boardCopy(board);
 					
-					newBoard = brickPopBot.propogate(newBoard, i, j, newBoard[i][j][0]);
+					newBoard = brickPopBot.propagate(newBoard, i, j, newBoard[i][j][0]);
 					newBoard = brickPopBot.colapseSpace(newBoard);
-					erraseBoard = brickPopBot.propogate(erraseBoard, i, j, erraseBoard[i][j][0]);
+					erraseBoard = brickPopBot.propagate(erraseBoard, i, j, erraseBoard[i][j][0]);
 					
 					if (brickPopBot.allZeros(newBoard))
 					{
@@ -61,17 +61,13 @@ public class ThreadedDepthFirst extends Thread
 						move[1] = board[i][j][2];
 						scoreTurns.moves.add(move);
 						scoreTurns.score = brickPopBot.turnScore(board, i, j);
-						scoreTurns.compleated = true;
+						scoreTurns.completed = true;
 						System.out.println("found solution");
 						return scoreTurns;
 					}
 					else
 					{
-						if (brickPopBot.numberOfZeros(newBoard) == brickPopBot.numberOfZeros(board))
-						{
-						
-						}
-						else
+						if (brickPopBot.numberOfZeros(newBoard) != brickPopBot.numberOfZeros(board))
 						{
 							if (brickPopBot.noSingleColourCubes(newBoard))
 							{
@@ -87,7 +83,7 @@ public class ThreadedDepthFirst extends Thread
 									returnMoves[1] = board[i][j][2];
 									scoreTurns.moves.add(returnMoves);
 									scoreTurns.score = scoreTurns.score + brickPopBot.turnScore(board, i, j);
-									if (scoreTurns.compleated)
+									if (scoreTurns.completed)
 									{
 										return scoreTurns;
 									}

@@ -17,7 +17,7 @@ public class ThreadedSolver extends Thread
 	private LinkedList<int[]> threadMoves ;
 	private int currentScore;
 	private Stack<ScoreTurns> answers;
-	int depth;
+	private int depth;
 	static int setDepth =0;
 	
 	ThreadedSolver(int[][][] threadBoard, LinkedList<int[]> threadMoves, int currentScore, Stack<ScoreTurns> answers, int depth)
@@ -65,10 +65,10 @@ public class ThreadedSolver extends Thread
 				{
 					int[][][] newBoard = brickPopBot.boardCopy(board);
 					
-					newBoard = brickPopBot.propogate(newBoard, i, j, newBoard[i][j][0]);
+					newBoard = brickPopBot.propagate(newBoard, i, j, newBoard[i][j][0]);
 					newBoard = brickPopBot.colapseSpace(newBoard);
 					
-					eraseBoard = brickPopBot.propogate(eraseBoard, i, j, eraseBoard[i][j][0]);
+					eraseBoard = brickPopBot.propagate(eraseBoard, i, j, eraseBoard[i][j][0]);
 					
 					if (brickPopBot.allZeros(newBoard))
 					{
@@ -80,17 +80,13 @@ public class ThreadedSolver extends Thread
 						scoreTurns.moves.add(move);
 						scoreTurns.score = brickPopBot.turnScore(board, i, j);
 						scoreTurns.moves.addAll(brickPopBot.listToStack(threadMoves));
-						scoreTurns.compleated = true;
+						scoreTurns.completed = true;
 						answers.add(scoreTurns);
 						System.out.println("found solution, in breadth first");
 					}
 					else
 					{
-						if (brickPopBot.numberOfZeros(newBoard) == brickPopBot.numberOfZeros(board))
-						{
-							
-//							System.out.printf("%d %d\n",i,j);
-						}else
+						if (brickPopBot.numberOfZeros(newBoard) != brickPopBot.numberOfZeros(board))
 						{
 							if (brickPopBot.noSingleColourCubes(newBoard))
 							{
